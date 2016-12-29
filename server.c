@@ -9,9 +9,9 @@
 #include <string.h>
 #include <stdbool.h>
 #include <pthread.h>
-#define TOKEN_SIZE 60
+#define TOKEN_SIZE 30
 #define USER_SIZE 100
-#define BUFFER_SIZE 512
+#define BUFFER_SIZE 1024
 
 typedef struct UserModel
 {
@@ -111,7 +111,7 @@ void *ConnectionHandler(void *socket)
 
 		if(strstr(incoming, "login") == NULL)
 		{
-			char message[100];
+			char message[400];
 			strcpy(message, findUserName(senderSocketNo));
 			strcat(message, " sent a message as: ");
 			printf("%s", message);
@@ -134,7 +134,7 @@ void *ConnectionHandler(void *socket)
 			if(isUserExist(splitArray[0]) == true || isGroupExist(splitArray[0]) == true)
 			{
 				split = strtok(NULL, " ");
-				splitArray[1] = (char *)calloc(100, 1);
+				splitArray[1] = (char *)calloc(400, 1);
 				while(split != NULL)
 				{
 					strcat(splitArray[1], split);
@@ -153,7 +153,8 @@ void *ConnectionHandler(void *socket)
 			if(sizeofUsers > USER_SIZE)
 			{
 				strcpy(outgoing, "user sayısı 100'e ulaştı.");
-				send(senderSocketNo, encrypt(senderSocketNo, outgoing, strlen(outgoing)), strlen(outgoing), 0);
+				strcpy(outgoing, encrypt(senderSocketNo, outgoing, strlen(outgoing)));
+				send(senderSocketNo, outgoing, strlen(outgoing), 0);
 			}
 			
 			else
@@ -165,18 +166,13 @@ void *ConnectionHandler(void *socket)
 		else if(strcmp(splitArray[0], "getusers") == 0 && splitArray[1] == NULL)
 		{
 			GetUsers(senderSocketNo);
-			char message[100];
-			strcpy(message, "replying to ");
-			strcat(message, findUserName(senderSocketNo));
-			strcat(message, " as: ");
-			strcat(message, outgoing);
-			puts(message);
 		}
 
 		else if(strcmp(splitArray[0], "alias") == 0)
 		{
 			GenerateGroup(splitArray[1], splitArray[2]);
-			send(senderSocketNo, encrypt(senderSocketNo, outgoing, strlen(outgoing)), strlen(outgoing), 0);
+			strcpy(outgoing, encrypt(senderSocketNo, outgoing, strlen(outgoing)));
+			send(senderSocketNo, outgoing, strlen(outgoing), 0);
 		}
 
 		else if(isUserExist(splitArray[0]) == true && splitArray[1] != NULL) //send message for single user
@@ -186,7 +182,17 @@ void *ConnectionHandler(void *socket)
 			strcat(outgoing, splitArray[1]);
 
 			int receiverSocketNumber = findUserSocketNumber(splitArray[0]);
-			send(receiverSocketNumber, encrypt(receiverSocketNumber, outgoing, strlen(outgoing)), strlen(outgoing), 0);			
+
+			if(receiverSocketNumber != senderSocketNo)
+			{
+				strcpy(outgoing, encrypt(receiverSocketNumber, outgoing, strlen(outgoing)));
+				send(receiverSocketNumber, outgoing, strlen(outgoing), 0);
+			}	
+
+			else
+			{
+				puts("Kendine mesaj yollama");
+			}		
 		}
 
 		else if(isGroupExist(splitArray[0]) == true && splitArray[1] != NULL) //send group message
@@ -197,7 +203,8 @@ void *ConnectionHandler(void *socket)
 		else
 		{
 			strcpy(outgoing, "invalid message");
-			send(senderSocketNo, encrypt(senderSocketNo, outgoing, strlen(outgoing)), strlen(outgoing), 0);
+			strcpy(outgoing, encrypt(senderSocketNo, outgoing, strlen(outgoing)));
+			send(senderSocketNo, outgoing, strlen(outgoing), 0);
 		}
 
 		fflush(stdout);
@@ -367,8 +374,9 @@ void SendGroupMessage(int senderSocketNumber, char groupName[], char message[])
 			for(i = 0; i < sizeof(temp->Members) / sizeof(temp->Members[0]); i++)
 			{
 				if(temp->Members[i] != 0)
-				{					
-					send(temp->Members[i], encrypt(temp->Members[i], outgoing, strlen(outgoing)), strlen(outgoing), 0);
+				{				
+					strcpy(outgoing, encrypt(temp->Members[i], outgoing, strlen(outgoing)));
+					send(temp->Members[i], outgoing, strlen(outgoing), 0);
 				}
 			}
 		}
@@ -505,7 +513,15 @@ void GetUsers(int userSocketNumber)
 		strcat(outgoing, ",");
 	}
 
-	send(userSocketNumber, encrypt(userSocketNumber, outgoing, strlen(outgoing)), strlen(outgoing), 0);
+	char *message = (char *)calloc(100,1);
+	strcpy(message, "replying to ");
+	strcat(message, findUserName(userSocketNumber));
+	strcat(message, " as: ");
+	strcat(message, outgoing);
+	puts(message);
+
+	strcpy(outgoing, encrypt(userSocketNumber, outgoing, strlen(outgoing)));
+	send(userSocketNumber, outgoing, strlen(outgoing), 0);
 }
 
 char* createToken()
@@ -517,7 +533,7 @@ char* createToken()
 	int i;
 	for(i = 0; i < TOKEN_SIZE; i++)
 	{
-		randomUnSigned = rand() % 80 + 33; 
+		randomUnSigned = rand() % 94 + 33; 
 		sprintf(randomChar, "%c", randomUnSigned);
 		strcat(token, randomChar);
 	}

@@ -8,9 +8,9 @@
 #include <unistd.h>
 #include <errno.h>
 #include <stdbool.h>
-#define BUFFER_SIZE 512
+#define BUFFER_SIZE 1024
 #define SERVER "127.0.0.1"
-#define TOKEN_SIZE 60
+#define TOKEN_SIZE 30
 
 char outgoing[BUFFER_SIZE];
 char incoming[BUFFER_SIZE];
@@ -53,7 +53,7 @@ int main()
 		puts("Connected to server");
 	}
 
-    newSocked = calloc(1, 1);
+    newSocked = malloc(1);
     *newSocked = senderSocket;
 
     if(pthread_create(&thread, NULL, ReceiveMessage, (void*) newSocked) < 0)
@@ -87,7 +87,8 @@ int main()
 
 				else
 				{
-					send(senderSocket, encrypt(outgoing, strlen(outgoing)), strlen(outgoing), 0);
+					strcpy(outgoing, encrypt(outgoing, strlen(outgoing)));
+					send(senderSocket, outgoing, strlen(outgoing), 0);
 				}
 			}
 		}
